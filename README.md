@@ -1,0 +1,2 @@
+# vangare
+Python XMPP Server
