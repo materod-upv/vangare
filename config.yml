@@ -1,0 +1,14 @@
+# LOG CONFIG
+log_level: 'DEBUG'
+log_file: 'vangare.log'
+log_format: "<green>{time}</green> - <level>{level}: {message}</level>"
+log_rotation: '500 MB'
+
+# XMPP SERVER CONFIG
+host: 'localhost'
+client_port: 5222
+server_port: 5269
+family: IPV4
+
+# OTHERS
+interactive: False
