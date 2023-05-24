@@ -1,12 +1,16 @@
+# Vangare: The XMPP server written in Python.
+# Copyright (C) 2020 María Ten Rodríguez
+# This file is part of Vangare.
+# See the file LICENSE for copying permission.
+
 import asyncio
 import signal
 import socket
 import sys
-import typing
 
 from loguru import logger
 
-from network import VangareClientProtocol
+from vangare.network.XMLStreamProtocol import VangareClientProtocol
 
 
 class GracefulExit(SystemExit):

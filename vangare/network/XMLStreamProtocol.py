@@ -1,3 +1,8 @@
+# Vangare: The XMPP server written in Python.
+# Copyright (C) 2020 María Ten Rodríguez
+# This file is part of Vangare.
+# See the file LICENSE for copying permission.
+
 import asyncio
 
 
@@ -12,7 +17,7 @@ class VangareClientProtocol(asyncio.Protocol):
         print("Data received: {!r}".format(message))
 
         print("Send: {!r}".format(message))
-        self.transport.write(data)
+        self.transport.write(data)  # type: ignore
 
         print("Close the client socket")
         self.transport.close()

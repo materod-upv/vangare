@@ -6,7 +6,7 @@ import yaml
 
 from loguru import logger
 
-from vangare import VangareServer, run_server
+from vangare.server import VangareServer, run_server
 
 
 def CommandWithConfigFile(config_file_param_name):
@@ -33,7 +33,6 @@ def CommandWithConfigFile(config_file_param_name):
     return CustomCommandClass
 
 
-# LOG CONFIG
 @click.option("--log_level", default="INFO", type=str, help="Sets the logging level")
 @click.option(
     "--log_file", default="vangare.log", type=str, help="Sets the logging filename"
@@ -47,8 +46,6 @@ def CommandWithConfigFile(config_file_param_name):
 @click.option(
     "--log_rotation", default=None, type=str, help="Sets the logging file rotation mode"
 )
-
-# XMPP SERVER CONFIG
 @click.option("--host", default="localhost", type=str, help="Server hostname")
 @click.option("--client_port", default=5222, type=int, help="Client connections port")
 @click.option("--server_port", default=5269, type=int, help="Server connections port")
@@ -58,8 +55,6 @@ def CommandWithConfigFile(config_file_param_name):
     type=click.Choice(["IPV4", "IPV6", "NONE"]),
     help="Server connections port",
 )
-
-# OTHERS
 @click.option(
     "-i",
     "--interactive",
