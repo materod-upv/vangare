@@ -31,7 +31,7 @@ class VangareServer:
 
     def __init__(
         self,
-        host="localhost",
+        host="0.0.0.0",
         client_port=5222,
         server_port=5269,
         family=socket.AF_INET,
@@ -123,6 +123,7 @@ def run_server(server: VangareServer, debug: bool = False, interactive: bool = F
         # Run the server
         main_task = loop.create_task(server.start(), name="main_server")
         loop.run_until_complete(main_task)
+        loop.run_forever()
     except (GracefulExit, KeyboardInterrupt):  # pragma: no cover
         pass
     finally:
