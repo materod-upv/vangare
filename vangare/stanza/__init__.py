@@ -3,6 +3,6 @@
 # This file is part of Vangare.
 # See the file LICENSE for copying permission.
 
-from vangare.network.XMLStreamProtocol import XMLStreamProtocol
+from vangare.stanza.StanzaHandler import StanzaHandler
 
-__all__ = ["XMLStreamProtocol"]
+__all__ = ["StanzaHandler"]

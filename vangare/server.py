@@ -10,12 +10,14 @@ import sys
 
 from loguru import logger
 
-from vangare.network.XMLStreamProtocol import VangareClientProtocol
+from vangare.network.XMLStreamProtocol import XMLStreamProtocol
 
+# XMPP OFFICIAL PORTS
+CLIENT_CON_PORT = 5222
+SERVER_CON_PORT = 5269
 
 class GracefulExit(SystemExit):
     code = 1
-
 
 class VangareServer:
     """Vangare server class."""
@@ -32,8 +34,8 @@ class VangareServer:
     def __init__(
         self,
         host="0.0.0.0",
-        client_port=5222,
-        server_port=5269,
+        client_port=CLIENT_CON_PORT,
+        server_port=SERVER_CON_PORT,
         family=socket.AF_INET,
     ):
         self._host = host
@@ -51,7 +53,7 @@ class VangareServer:
         loop = asyncio.get_event_loop()
 
         self._client_listener = await loop.create_server(
-            lambda: VangareClientProtocol(),
+            lambda: XMLStreamProtocol(),
             host=self._host,
             port=self._client_port,
             family=self._family,
@@ -62,7 +64,7 @@ class VangareServer:
         )
 
         self._server_listener = await loop.create_server(
-            lambda: VangareClientProtocol(),
+            lambda: XMLStreamProtocol(),
             host=self._host,
             port=self._server_port,
             family=self._family,

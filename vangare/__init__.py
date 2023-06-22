@@ -3,7 +3,8 @@
 # This file is part of Vangare.
 # See the file LICENSE for copying permission.
 
-from vangare.network import VangareClientProtocol
+from vangare.network import XMLStreamProtocol
+from vangare.stanza import StanzaHandler
 from vangare.server import GracefulExit, VangareServer, run_server
 
 __all__ = [
