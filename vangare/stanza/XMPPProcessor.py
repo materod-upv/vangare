@@ -1,12 +1,23 @@
 from loguru import logger
 from xml import sax
 
-class StanzaHandler(sax.ContentHandler):
+class XMPPProcessor(sax.ContentHandler):
     '''
-    Useful class to parse a incomping stanza from the stream. Inheriting from sax.ContentHandler
+    Useful class to parse a incomping xml objectos from the stream. Inheriting from sax.ContentHandler
     '''
+
+    def __init__(self):
+        super().__init__()
+        self.on_open_stream = None
+        self.on_close_stream = None
+
     def startElementNS(self, name, qname, attrs):
         logger.debug(f"Start element NS: {qname}:{name}-> {attrs}")
+
+        if name[1] == "stream":
+            logger.debug("Stream opened")
+            attrs = dict(attrs)
+            print(attrs)
 
     def endElementNS(self, name, qname):
         logger.debug(f"End element NS: {qname}:{name}")

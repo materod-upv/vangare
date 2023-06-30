@@ -3,11 +3,15 @@
 
 """ Test Slixmpp client connection to server"""
 import asyncio
+import logging
 
 from slixmpp import ClientXMPP
 
 
 def test_client_connection(run_server_fixture):
+    # Configure logging
+    logging.basicConfig(level='DEBUG')
+
     # Create a slixmpp client
     client = ClientXMPP("test@127.0.0.1", "test")
 
@@ -23,6 +27,14 @@ def test_client_connection(run_server_fixture):
         print("Slixmpp connection failed:", event),
     )
     client.add_event_handler("connection_failed", connection_failed_callback)
+
+    # Create a socket error event callback
+    client.socket_error_event = asyncio.Event()
+    socket_error_callback = lambda event: (
+        client.socket_error_event.set(),
+        print("Slixmpp socket error:", event),
+    )
+    client.add_event_handler("socket_error", socket_error_callback)
 
     # Create a disconnection event callback
     client.disconnected_event = asyncio.Event()
@@ -43,6 +55,14 @@ def test_client_connection(run_server_fixture):
     client.session_ended_event = asyncio.Event()
     session_end_callback = lambda event: client.session_ended_event.set()
     client.add_event_handler("session_end", session_end_callback)
+
+    # Create a stream error event callback
+    client.stream_error_event = asyncio.Event()
+    stream_error_callback = lambda event: (
+        client.stream_error_event.set(),
+        print("Slixmpp stream error:", event),
+    )
+    client.add_event_handler("stream_error", stream_error_callback)
 
     # Test server connection
     client.connect()

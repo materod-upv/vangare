@@ -9,27 +9,23 @@ from enum import Enum
 from loguru import logger
 from xml import sax
 
-from vangare.stanza.StanzaHandler import StanzaHandler
-
-class XMLStreamState(Enum):
-    INVALID = 0
-    LISTENING = 1
-    CONNECTED = 2
-    CLOSED = 3
-
+from vangare.network.XMPPStreamHandler import XMPPStreamHandler
 
 class XMLStreamProtocol(asyncio.Protocol):
     '''
-    Manages the stream xml protocol
+    Protocol to manage the network connection between nodes in the XMPP network. Handles the transport layer.
     '''
 
-    __slots__ = ["_state", "_transport", "_xml_parser"]
+    __slots__ = ["_state", "_transport", "_xml_parser", "_xml_writer"]
 
     def __init__(self):
-        self._state = XMLStreamState.LISTENING
         self._transport = None
         self._xml_parser = None
+        self._xml_writer = None
 
+    @property
+    def transport(self):
+        return self._transport
 
     def connection_made(self, transport):
         '''
@@ -38,18 +34,20 @@ class XMLStreamProtocol(asyncio.Protocol):
         :param transport: The transport object for the connection
         :type transport: asyncio.Transport
         '''
-        if self._state == XMLStreamState.LISTENING:
-            self._state = XMLStreamState.CONNECTED
+        if transport:
             self._transport = transport
+
             self._xml_parser = sax.make_parser()
             self._xml_parser.setFeature(sax.handler.feature_namespaces, 1)
-            self._xml_parser.setContentHandler(StanzaHandler())
+            self._xml_parser.setContentHandler(XMPPStreamHandler(self._transport))
+
             logger.info(f"Connection from {self._transport.get_extra_info('peername')}")
         else:
-            logger.error("Connection made while not listening")
-            self._state = XMLStreamState.INVALID
             self._transport = None
             self._xml_parser = None
+            self._xml_writer = None
+
+            logger.error("Invalid transport")
 
     def connection_lost(self, exc):
         '''
@@ -60,9 +58,9 @@ class XMLStreamProtocol(asyncio.Protocol):
         '''
         logger.info(f"Connection lost from {self._transport.get_extra_info('peername')}: Reason {exc}")
 
-        self._state = XMLStreamState.CLOSED
         self._transport = None
         self._xml_parser = None
+        self._xml_writer = None
 
     def data_received(self, data):
         '''
@@ -86,8 +84,8 @@ class XMLStreamProtocol(asyncio.Protocol):
         '''
         logger.debug(f"EOF received from {self._transport.get_extra_info('peername')}")
 
-        self._state = XMLStreamState.CLOSED
         self._transport = None
         self._xml_parser = None
+        self._xml_writer = None
 
 

@@ -3,6 +3,6 @@
 # This file is part of Vangare.
 # See the file LICENSE for copying permission.
 
-from vangare.stanza.StanzaHandler import StanzaHandler
+from vangare.stanza.XMPPProcessor import XMPPProcessor
 
-__all__ = ["StanzaHandler"]
+__all__ = ["XMPPProcessor"]
