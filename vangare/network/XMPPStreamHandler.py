@@ -1,95 +1,92 @@
+# Vangare: The XMPP server written in Python.
+# Copyright (C) 2020 María Ten Rodríguez
+# This file is part of Vangare.
+# See the file LICENSE for copying permission.
+
 from enum import Enum
 from loguru import logger
 from xml import sax
 from uuid import uuid4
 
-# Define namespaces
 class Namespaces(Enum):
+    '''
+    Defines the available namespaces in the protocol.
+    '''
     XMLSTREAM = "http://etherx.jabber.org/streams"
     CLIENT = "jabber:client"
 
 class StreamState(Enum):
+    '''
+    Stream connection states.
+    '''
     CONNECTED = 0
     OPENED = 1
 
 class XMLElement:
-    __slots__ = ["_tag"]
+    '''
+    Base class for all the xml elements.
+    '''
+    __slots__ = ["_tag", "_attributes"]
 
-    def __init__(self, tag):
+    def __init__(self, tag, attributes=None):
         self._tag = tag
+        self._attributes = attributes
 
     @property
     def tag(self):
         return self._tag
+    
+    @property
+    def attributes(self):
+        return self._attributes
 
-    def to_string(self):
-        pass
+    def open_tag(self):
+        data = '<' + self._tag
+        if self._attributes:
+            for (key, value) in self._attributes.items():
+                data += ' ' + key + "='" + value + "'"
+        data += ">"
+        logger.debug(f"Open tag: {data}")
+
+        return data.encode()
+
+    def close_tag(self):
+        data = "</" + self._tag + ">"
+        logger.debug(f"Close tag: {data}")
+
+        return data.encode()
 
 class Stream(XMLElement):
-    __slots__ = ["_id", "_from", "_to", "_version", "_xml_lang", "_xmlns", "_xmlns_stream"]
-
+    '''
+    Stream open tag to open a stream connection.
+    '''
     def __init__(self, id_=None, from_=None, to=None, version=(1, 0), xml_lang="en", xmlns=Namespaces.CLIENT, xmlns_stream=Namespaces.XMLSTREAM):
-        super().__init__("stream:stream")
+        
+        attributes = {}
 
-        self._tag = "stream:stream"
-        self._id = id_
-        self._from = from_
-        self._to = to
-        self._version = version
-        self._xml_lang= xml_lang
-        self._xmlns = xmlns
-        self._xmlns_stream = xmlns_stream
+        if id_:
+            attributes["id"] = id_
+        if from_:
+            attributes["from"] = from_
+        if to:
+            attributes["to"] = to
+        if version:
+            attributes["version"] = str(version[0]) + "." + str(version[1])
+        if xml_lang:
+            attributes["xml:lang"] = xml_lang
+        if xmlns:
+            attributes["xmlns"] = xmlns.value
+        if xmlns_stream:
+            attributes["xmlns:stream"] = xmlns_stream.value
 
-    @property
-    def id_(self):
-        return self._id
-
-    @property
-    def from_(self):
-        return self._from
-
-    @property
-    def to(self):
-        return self._to
-
-    @property
-    def version(self):
-        return self._version
+        super().__init__("stream:stream", attributes)
     
-    @property
-    def xml_lang(self):
-        return self._xml_lang
-    
-    @property
-    def xmlns(self):
-        return self._xmlns
-    
-    @property
-    def xmlns_stream(self):
-        return self._xmlns_stream
-
-    def from_xml(self, name, qname, attrs):
-        pass
-
-    def to_string(self):
-        data = b"<stream:stream "
-        if self._from:
-            data += b"from='" + self._from.encode() + b"' "
-        if self._to:
-            data += b"to='" + self._to.encode() + b"' "
-        if self._id:
-            data += b"id='" + self._id.encode() + b"' "
-        if self._version:
-            data += b"version='" + str(self._version[0]).encode() + b"." + str(self._version[1]).encode() + b"' "
-        if self._xml_lang:
-            data += b"xml:lang='" + self._xml_lang.encode() + b"' "
-        if self._xmlns:
-            data += b"xmlns='" + self._xmlns.value.encode() + b"' "
-        if self._xmlns_stream:
-            data += b"xmlns:stream='" + self._xmlns_stream.value.encode() + b"' "
-        data += b">"
-
-        return data
+class Features(XMLElement):
+    '''
+    Features tag
+    '''
+    def __init__(self):
+        super().__init__("stream:features")
 
 class XMPPStreamHandler(sax.ContentHandler):
     '''
@@ -99,10 +96,14 @@ class XMPPStreamHandler(sax.ContentHandler):
 
     def __init__(self, buffer):
         super().__init__()
-
         self._state = StreamState.CONNECTED
-
         self._buffer = buffer
+
+    def startDocument(self):
+        pass
+
+    def startElement(self, name, attrs):
+        pass
 
     def startElementNS(self, name, qname, attrs):
         logger.debug(f"Start element NS: {name}:{qname}-> {attrs}")
@@ -113,30 +114,42 @@ class XMPPStreamHandler(sax.ContentHandler):
             # Load attributes
             attrs = dict(attrs)
 
+            # Get attributes
+            id_= str(uuid4())
             from_ = attrs.pop((None, "from"), None)
             to = attrs.pop((None, "to"), None)
             version = tuple(map(int, attrs.pop((None, "version"), "0.9").split(".")))
-            lang = attrs.pop(("xml", "lang"), None)
+            lang = attrs.pop(("http://www.w3.org/XML/1998/namespace", "lang"), None)
 
             # Create response attributes
-            response_stream = Stream(id_=str(uuid4()), from_=to, to=from_, version=version, xml_lang=lang, xmlns=Namespaces.CLIENT, xmlns_stream=Namespaces.XMLSTREAM)
+            open_stream = Stream(id_=id_, from_=to, to=from_, version=version, xml_lang=lang, xmlns=Namespaces.CLIENT, xmlns_stream=Namespaces.XMLSTREAM)
+            features_stream = Features()
             
             # Send response to client
             self._buffer.write(b"<?xml version='1.0'?>")
-            self._buffer.write(response_stream.to_string())
+            self._buffer.write(open_stream.open_tag())
+            self._buffer.write(features_stream.open_tag())
+            self._buffer.write(features_stream.close_tag())
+
+            # Change state
+            self._state = StreamState.OPENED
+
+            logger.info(f"Stream opened: {from_} -> {to} ({id_})")
+        else:
+            logger.debug(f"Unknown element: {name}:{qname}")
 
     def endElementNS(self, name, qname):
         logger.debug(f"End element NS: {qname}:{name}")
 
     def characters(self, content):
-        logger.debug(f"Characters: {content}")
+        pass
 
     def ignorableWhitespace(self, whitespace):
-        logger.debug(f"Ignorable whitespace: {whitespace}")
+        pass
 
     def processingInstruction(self, target, data):
-        logger.debug(f"Processing instruction: {target} -> {data}")
+        pass
 
     def skippedEntity(self, name):
-        logger.debug(f"Skipped entity: {name}")
+        pass
 

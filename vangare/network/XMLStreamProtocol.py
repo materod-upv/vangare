@@ -5,27 +5,25 @@
 
 import asyncio
 
-from enum import Enum
 from loguru import logger
 from xml import sax
 
+from vangare.network.StreamAlivenessMonitor import StreamAlivenessMonitor
 from vangare.network.XMPPStreamHandler import XMPPStreamHandler
+
 
 class XMLStreamProtocol(asyncio.Protocol):
     '''
     Protocol to manage the network connection between nodes in the XMPP network. Handles the transport layer.
     '''
 
-    __slots__ = ["_state", "_transport", "_xml_parser", "_xml_writer"]
+    __slots__ = ["_state", "_transport", "_xml_parser", "_connection_timeout", "_timeout_monitor"]
 
-    def __init__(self):
+    def __init__(self, connection_timeout=None):
         self._transport = None
         self._xml_parser = None
-        self._xml_writer = None
-
-    @property
-    def transport(self):
-        return self._transport
+        self._timeout_monitor = None
+        self._connection_timeout = connection_timeout
 
     def connection_made(self, transport):
         '''
@@ -38,8 +36,12 @@ class XMLStreamProtocol(asyncio.Protocol):
             self._transport = transport
 
             self._xml_parser = sax.make_parser()
-            self._xml_parser.setFeature(sax.handler.feature_namespaces, 1)
+            self._xml_parser.setFeature(sax.handler.feature_namespaces, True)
+            self._xml_parser.setFeature(sax.handler.feature_external_ges, False)
             self._xml_parser.setContentHandler(XMPPStreamHandler(self._transport))
+
+            if self._connection_timeout:
+                self._timeout_monitor = StreamAlivenessMonitor(timeout=self._connection_timeout, callback=self.connection_timeout)
 
             logger.info(f"Connection from {self._transport.get_extra_info('peername')}")
         else:
@@ -70,6 +72,8 @@ class XMLStreamProtocol(asyncio.Protocol):
         :type data: Byte array
         '''
         logger.debug(f"Data received: {data.decode()}")
+
+        self._timeout_monitor.reset()
         
         try:
             self._xml_parser.feed(data)
@@ -83,6 +87,19 @@ class XMLStreamProtocol(asyncio.Protocol):
         Called when the client or another server sends an EOF
         '''
         logger.debug(f"EOF received from {self._transport.get_extra_info('peername')}")
+
+        self._transport = None
+        self._xml_parser = None
+        self._xml_writer = None
+
+    def connection_timeout(self):
+        '''
+        Called when the stream is not responding for a long tikem
+        '''
+        logger.debug(f"Connection timeout from {self._transport.get_extra_info('peername')}")
+
+        self._transport.write(b"<connection-timeout/>")
+        self._transport.close()
 
         self._transport = None
         self._xml_parser = None

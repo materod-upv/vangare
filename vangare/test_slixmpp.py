@@ -8,6 +8,7 @@ class TestClientBot(ClientXMPP):
     def __init__(self, jid, password):
         ClientXMPP.__init__(self, jid, password)
         self.add_event_handler("connection_failed", self.connection_error)
+        self.add_event_handler("stream_negotiated", self.stream_negotiated)
         self.add_event_handler("session_start", self.start)
         self.add_event_handler("message", self.message)
         self.error = False
@@ -15,6 +16,9 @@ class TestClientBot(ClientXMPP):
     async def connection_error(self, event):
         self.error = True
         self.disconnect()
+
+    async def stream_negotiated(self, event):
+        print("STREAM NEGOTIATED")
 
     async def start(self, event):
         print("HOLA")
@@ -32,5 +36,5 @@ class TestClientBot(ClientXMPP):
 if __name__ == "__main__":
     logging.basicConfig(level=logging.DEBUG, format="%(levelname)-8s %(message)s")
     xmpp = TestClientBot("test@127.0.0.1", "1234")
-    xmpp.connect()
+    xmpp.connect(use_ssl=False, force_starttls=False, disable_starttls=True)
     xmpp.process(forever=False)

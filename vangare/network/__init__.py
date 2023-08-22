@@ -3,7 +3,9 @@
 # This file is part of Vangare.
 # See the file LICENSE for copying permission.
 
+from vangare.network.StreamAlivenessMonitor import StreamAlivenessMonitor
 from vangare.network.XMLStreamProtocol import XMLStreamProtocol
 from vangare.network.XMPPStreamHandler import XMPPStreamHandler
 
-__all__ = ["XMLStreamProtocol", "XMPPStreamHandler"]
+
+__all__ = ["StreamAlivenessMonitor", "XMLStreamProtocol", "XMPPStreamHandler"]

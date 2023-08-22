@@ -27,7 +27,7 @@
 	// Configure tool-specific properties.
 	"customizations": {
 		"vscode": {
-			"extensions": ["GitHub.vscode-github-actions", "GitHub.copilot-nightly", "GitHub.copilot-labs"]
+			"extensions": ["GitHub.vscode-github-actions", "GitHub.copilot", "GitHub.copilot-labs"]
 		}
 	}
 

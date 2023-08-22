@@ -29,6 +29,7 @@ class VangareServer:
         "_family",
         "_client_listener",
         "_server_listener",
+        "_connection_timeout"
     ]
 
     def __init__(
@@ -37,6 +38,7 @@ class VangareServer:
         client_port=CLIENT_CON_PORT,
         server_port=SERVER_CON_PORT,
         family=socket.AF_INET,
+        connection_timeout=60
     ):
         self._host = host
         self._client_port = client_port
@@ -44,6 +46,7 @@ class VangareServer:
         self._family = family
         self._client_listener = None
         self._server_listener = None
+        self._connection_timeout = connection_timeout
 
     async def start(self):
         """Start the server."""
@@ -53,7 +56,7 @@ class VangareServer:
         loop = asyncio.get_event_loop()
 
         self._client_listener = await loop.create_server(
-            lambda: XMLStreamProtocol(),
+            lambda: XMLStreamProtocol(connection_timeout=self._connection_timeout),
             host=self._host,
             port=self._client_port,
             family=self._family,
@@ -64,7 +67,7 @@ class VangareServer:
         )
 
         self._server_listener = await loop.create_server(
-            lambda: XMLStreamProtocol(),
+            lambda: XMLStreamProtocol(connection_timeout=self._connection_timeout),
             host=self._host,
             port=self._server_port,
             family=self._family,

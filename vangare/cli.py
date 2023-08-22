@@ -63,6 +63,12 @@ def CommandWithConfigFile(config_file_param_name):
     help="Enable interactive commands",
 )
 @click.option(
+    "-t",
+    "--timeout",
+    default=60,
+    type=int,
+    help="Connection timeout in seconds")
+@click.option(
     "-c",
     "--config_file",
     type=click.Path(exists=True),
@@ -79,6 +85,7 @@ def main(
     server_port,
     family,
     interactive,
+    timeout,
     config_file,
 ):
     # Register logger
@@ -106,6 +113,7 @@ def main(
         client_port=client_port,
         server_port=server_port,
         family=f,
+        connection_timeout=timeout,
     )
 
     run_server(server, debug, interactive)

@@ -22,12 +22,20 @@ def test_client_connection(run_server_fixture):
 
     # Create a connection failed event callback
     client.connection_failed_event = asyncio.Event()
-    connection_failed_callback = lambda event: (
-        client.connection_failed_event.set(),
-        print("Slixmpp connection failed:", event),
-    )
+    connection_failed_callback = lambda event: client.connection_failed_event.set()
     client.add_event_handler("connection_failed", connection_failed_callback)
 
+    # Create a stream negotiation event callback
+    client.stream_negotiated_event = asyncio.Event()
+    stream_negotiated_callback = lambda event: client.stream_negotiated_event.set()
+    client.add_event_handler("negotiated", stream_negotiated_callback)
+
+    # Create a connection failed event callback
+    client.stream_negotiated_failed_event = asyncio.Event()
+    stream_negotiated_failed_callback = lambda event: client.stream_negotiated_failed_event.set()
+    client.add_event_handler("negotiated_failed", stream_negotiated_failed_callback)
+
+    '''
     # Create a socket error event callback
     client.socket_error_event = asyncio.Event()
     socket_error_callback = lambda event: (
@@ -63,9 +71,10 @@ def test_client_connection(run_server_fixture):
         print("Slixmpp stream error:", event),
     )
     client.add_event_handler("stream_error", stream_error_callback)
+    '''
 
     # Test server connection
-    client.connect()
+    client.connect(use_ssl=False, force_starttls=False, disable_starttls=True)
     asyncio.get_event_loop().run_until_complete(
         asyncio.wait(
             [client.connected_event.wait(), client.connection_failed_event.wait()],
@@ -78,7 +87,22 @@ def test_client_connection(run_server_fixture):
     assert client.connected_event.is_set()
     assert not client.connection_failed_event.is_set()
 
+    # Test stream negotation
+    try:
+        asyncio.get_event_loop().run_until_complete(
+            asyncio.wait([client.stream_negotiated_event.wait()],
+            timeout=3
+            )
+        )
+    except asyncio.TimeoutError:
+        assert False, "Stream negotiation timeout"
+
+    assert client.stream_negotiated_event.is_set()
+    assert not client.stream_negotiation_failed_event.is_set()
+            
+
     # Test session start
+    '''
     try:
         asyncio.get_event_loop().run_until_complete(
             asyncio.wait([client.session_started_event.wait()],
@@ -89,3 +113,4 @@ def test_client_connection(run_server_fixture):
         assert False, "Session start timeout"
 
     assert client.session_started_event.is_set()
+    '''

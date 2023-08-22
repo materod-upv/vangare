@@ -3,6 +3,6 @@
 # This file is part of Vangare.
 # See the file LICENSE for copying permission.
 
-from vangare.stanza.XMPPProcessor import XMPPProcessor
+from vangare.stanza.StreamError import StreamError
 
-__all__ = ["XMPPProcessor"]
+__all__ = ["StreamError"]

@@ -1,5 +1,7 @@
 import asyncio
 
+from loguru import logger
+
 class StreamAlivenessMonitor:
     '''
     This class is a helper to monitor the aliveness of a stream. It will call a callback if the stream is not alive after a timeout.

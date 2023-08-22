@@ -1,16 +1,28 @@
-""" Test XMPPStreamHandler """
+import io
+import pytest
+import re
 
-import asyncio
+from xml import sax
+from vangare.network.XMPPStreamHandler import XMPPStreamHandler
 
 @pytest.fixture()
-async def server(pair_sockets):
-    loop = asyncio.get_running_loop()
-    tc, server = await loop.create_connection(
-        lambda: XMLStreamProtocol("jabber:client", hosts=["localhost"]),
-        sock=pair_sockets[0],
-    )
-    yield server
-    del server
+def buffer():
+    yield io.BytesIO()
 
-async def test_stream_closed(self, server):
-    print(server._status)
+@pytest.fixture()
+def xml_parser(buffer):
+    # Create the parser
+    xml_parser = sax.make_parser()
+    xml_parser.setFeature(sax.handler.feature_namespaces, 1)
+    xml_parser.setContentHandler(XMPPStreamHandler(buffer))
+    xml_parser.buffer = buffer
+
+    return xml_parser
+
+def test_bad_format(xml_parser): 
+     #TODO: Test bad format message ej <message><body>test</message>
+
+     assert True
+
+def test_bad_namespace_prefix(xml_parser):
+    

@@ -9,12 +9,13 @@ from vangare import VangareServer, run_server
 @pytest.fixture(scope="session", autouse=True)
 def run_server_fixture():
     # Create a server instance and start it in a separate process.
-    server = VangareServer(host="0.0.0.0")
+    server = VangareServer(host="0.0.0.0", connection_timeout=3)
     server_process = multiprocessing.Process(
         target=run_server,
         args=(
             server,
             True,
+            False
         ),
     )
     server_process.start()
