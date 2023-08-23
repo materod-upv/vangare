@@ -1,5 +1,11 @@
+# Vangare: The XMPP server written in Python.
+# Copyright (C) 2020 María Ten Rodríguez
+# This file is part of Vangare.
+# See the file LICENSE for copying permission.
+
 """Console script for vangare."""
 import click
+import os
 import socket
 import sys
 import yaml
@@ -7,6 +13,7 @@ import yaml
 from loguru import logger
 
 from vangare import VangareServer, run_server
+from vangare.features import StartTLSFeature, SASLFeature
 
 
 def CommandWithConfigFile(config_file_param_name):
@@ -34,9 +41,7 @@ def CommandWithConfigFile(config_file_param_name):
 
 
 @click.option("--log_level", default="INFO", type=str, help="Sets the logging level")
-@click.option(
-    "--log_file", default="vangare.log", type=str, help="Sets the logging filename"
-)
+@click.option("--log_file", default="vangare.log", type=str, help="Sets the logging filename")
 @click.option(
     "--log_format",
     default="<green>{time}</green> - <level>{level}: {message}</level>",
@@ -56,11 +61,29 @@ def CommandWithConfigFile(config_file_param_name):
     help="Server connections port",
 )
 @click.option(
-    "-i",
-    "--interactive",
-    default=False,
-    is_flag=True,
-    help="Enable interactive commands",
+    "--features",
+    default=["*starttls*", "*sasl*"],
+    help="Supported features by XMPP server. Add * to set the feature as required."
+)
+@click.option(
+    "--cert_file",
+    default=os.path.realpath("certs/server.crt"),
+    help="Sets the certificate file path for TLS connections"
+)
+@click.option(
+    "--key_file",
+    default=os.path.realpath("certs/server.key"),
+    help="Sets the private key file path for TLS connections"
+)
+@click.option(
+    "--sasl_mechanisms",
+    default=["PLAIN", "SCRAM-SHA-1", "SCRAMPLUS"],
+    help="Supported SASL mechanisms",
+)
+@click.option(
+    "--sasl_max_retries",
+    default=3,
+    help="Max retries on failed sasl authentication",
 )
 @click.option(
     "-t",
@@ -84,7 +107,11 @@ def main(
     client_port,
     server_port,
     family,
-    interactive,
+    features,
+    cert_file,
+    key_file,
+    sasl_mechanisms,
+    sasl_max_retries,
     timeout,
     config_file,
 ):
@@ -108,15 +135,25 @@ def main(
     if family == "IPV6":
         f = socket.AF_INET6
 
+    # Create server
     server = VangareServer(
         host=host,
         client_port=client_port,
         server_port=server_port,
         family=f,
-        connection_timeout=timeout,
+        connection_timeout=timeout
     )
 
-    run_server(server, debug, interactive)
+    # Set server features
+    for f in features:
+        required = f.startswith("*")
+        if f.trim() == "starttls" or f.trim() == "*starttls*":
+            server.features.register(StartTLSFeature(cert=cert_file, key=key_file, required=required))
+        elif f.trim() == "sasl" or f.trim() == "*sasl*":
+            server.features.register(SASLFeature(mechanisms=sasl_mechanisms, max_retries=sasl_max_retries, required=required))
+
+    # Run server
+    run_server(server, debug)
     return 0
 
 

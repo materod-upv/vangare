@@ -8,12 +8,7 @@ from loguru import logger
 from xml import sax
 from uuid import uuid4
 
-class Namespaces(Enum):
-    '''
-    Defines the available namespaces in the protocol.
-    '''
-    XMLSTREAM = "http://etherx.jabber.org/streams"
-    CLIENT = "jabber:client"
+from vangare.xml import Namespaces, Stream, StreamFeatures
 
 class StreamState(Enum):
     '''
@@ -21,72 +16,6 @@ class StreamState(Enum):
     '''
     CONNECTED = 0
     OPENED = 1
-
-class XMLElement:
-    '''
-    Base class for all the xml elements.
-    '''
-    __slots__ = ["_tag", "_attributes"]
-
-    def __init__(self, tag, attributes=None):
-        self._tag = tag
-        self._attributes = attributes
-
-    @property
-    def tag(self):
-        return self._tag
-    
-    @property
-    def attributes(self):
-        return self._attributes
-
-    def open_tag(self):
-        data = '<' + self._tag
-        if self._attributes:
-            for (key, value) in self._attributes.items():
-                data += ' ' + key + "='" + value + "'"
-        data += ">"
-        logger.debug(f"Open tag: {data}")
-
-        return data.encode()
-
-    def close_tag(self):
-        data = "</" + self._tag + ">"
-        logger.debug(f"Close tag: {data}")
-
-        return data.encode()
-
-class Stream(XMLElement):
-    '''
-    Stream open tag to open a stream connection.
-    '''
-    def __init__(self, id_=None, from_=None, to=None, version=(1, 0), xml_lang="en", xmlns=Namespaces.CLIENT, xmlns_stream=Namespaces.XMLSTREAM):
-        
-        attributes = {}
-
-        if id_:
-            attributes["id"] = id_
-        if from_:
-            attributes["from"] = from_
-        if to:
-            attributes["to"] = to
-        if version:
-            attributes["version"] = str(version[0]) + "." + str(version[1])
-        if xml_lang:
-            attributes["xml:lang"] = xml_lang
-        if xmlns:
-            attributes["xmlns"] = xmlns.value
-        if xmlns_stream:
-            attributes["xmlns:stream"] = xmlns_stream.value
-
-        super().__init__("stream:stream", attributes)
-    
-class Features(XMLElement):
-    '''
-    Features tag
-    '''
-    def __init__(self):
-        super().__init__("stream:features")
 
 class XMPPStreamHandler(sax.ContentHandler):
     '''
@@ -122,14 +51,13 @@ class XMPPStreamHandler(sax.ContentHandler):
             lang = attrs.pop(("http://www.w3.org/XML/1998/namespace", "lang"), None)
 
             # Create response attributes
-            open_stream = Stream(id_=id_, from_=to, to=from_, version=version, xml_lang=lang, xmlns=Namespaces.CLIENT, xmlns_stream=Namespaces.XMLSTREAM)
-            features_stream = Features()
+            stream = Stream(id_=id_, from_=to, to=from_, version=version, xml_lang=lang, xmlns=Namespaces.CLIENT)
+            features = StreamFeatures()
             
             # Send response to client
             self._buffer.write(b"<?xml version='1.0'?>")
-            self._buffer.write(open_stream.open_tag())
-            self._buffer.write(features_stream.open_tag())
-            self._buffer.write(features_stream.close_tag())
+            self._buffer.write(stream.open_tag())
+            self._buffer.write(features.to_string())
 
             # Change state
             self._state = StreamState.OPENED

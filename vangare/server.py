@@ -4,6 +4,7 @@
 # See the file LICENSE for copying permission.
 
 import asyncio
+import os
 import signal
 import socket
 import sys
@@ -11,13 +12,25 @@ import sys
 from loguru import logger
 
 from vangare.network.XMLStreamProtocol import XMLStreamProtocol
+from vangare.xml.BaseXML import Namespaces
 
 # XMPP OFFICIAL PORTS
 CLIENT_CON_PORT = 5222
 SERVER_CON_PORT = 5269
 
+async def wakeup():
+    """
+    This dummy task is needed to get keyboard interrupt signal on windows. Read this thread:
+    https://stackoverflow.com/questions/27480967/why-does-the-asyncios-event-loop-suppress-the-keyboardinterrupt-on-windows
+    """
+    while True:
+        await asyncio.sleep(1)
+
 class GracefulExit(SystemExit):
     code = 1
+
+def _raise_graceful_exit():
+    raise GracefulExit()
 
 class VangareServer:
     """Vangare server class."""
@@ -29,7 +42,8 @@ class VangareServer:
         "_family",
         "_client_listener",
         "_server_listener",
-        "_connection_timeout"
+        "_connection_timeout",
+        "_features"
     ]
 
     def __init__(
@@ -47,6 +61,7 @@ class VangareServer:
         self._client_listener = None
         self._server_listener = None
         self._connection_timeout = connection_timeout
+        self._features = []
 
     async def start(self):
         """Start the server."""
@@ -55,11 +70,16 @@ class VangareServer:
 
         loop = asyncio.get_event_loop()
 
+        # Add handlers
+
         self._client_listener = await loop.create_server(
-            lambda: XMLStreamProtocol(connection_timeout=self._connection_timeout),
+            lambda: XMLStreamProtocol(
+                namespace=Namespaces.CLIENT,
+                connection_timeout=self._connection_timeout,
+            ),
             host=self._host,
             port=self._client_port,
-            family=self._family,
+            family=self._family
         )
 
         logger.info(
@@ -67,10 +87,13 @@ class VangareServer:
         )
 
         self._server_listener = await loop.create_server(
-            lambda: XMLStreamProtocol(connection_timeout=self._connection_timeout),
+            lambda: XMLStreamProtocol(
+                namespace=Namespaces.SERVER,
+                connection_timeout=self._connection_timeout
+            ),
             host=self._host,
             port=self._server_port,
-            family=self._family,
+            family=self._family
         )
 
         logger.info(
@@ -103,10 +126,6 @@ class VangareServer:
             _raise_graceful_exit()
 
 
-def _raise_graceful_exit():
-    raise GracefulExit()
-
-
 def run_server(server: VangareServer, debug: bool = False, interactive: bool = False):
     loop = asyncio.new_event_loop()
     loop.set_debug(debug)
@@ -125,6 +144,10 @@ def run_server(server: VangareServer, debug: bool = False, interactive: bool = F
         loop.add_reader(sys.stdin.fileno(), server.on_command)
 
     try:
+        # Interrupt on windows when pressing CTRL+C
+        if os.name == "nt":
+            loop.run_until_complete(wakeup(), name="wakeup")
+        
         # Run the server
         main_task = loop.create_task(server.start(), name="main_server")
         loop.run_until_complete(main_task)
@@ -132,6 +155,13 @@ def run_server(server: VangareServer, debug: bool = False, interactive: bool = F
     except (GracefulExit, KeyboardInterrupt):  # pragma: no cover
         pass
     finally:
+        # Cancel pending tasks
+        tasks = asyncio.all_tasks(loop=loop)
+        for task in tasks:
+            task.cancel()
+        loop.run_until_complete(asyncio.gather(*tasks, return_exceptions=True))
+
+        # Close the server
         close_task = loop.create_task(server.stop(), name="close_server")
         loop.run_until_complete(close_task)
         loop.run_until_complete(loop.shutdown_asyncgens())

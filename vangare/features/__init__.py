@@ -3,6 +3,8 @@
 # This file is part of Vangare.
 # See the file LICENSE for copying permission.
 
-from vangare.stanza.StreamError import StreamError
+from vangare.features.StreamFeature import FeatureManager
+from vangare.features.StartTLSFeature import StartTLSFeature
 
-__all__ = ["StreamError"]
+
+__all__ = ["StartTLSFeature"]

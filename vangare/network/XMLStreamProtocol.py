@@ -10,6 +10,7 @@ from xml import sax
 
 from vangare.network.StreamAlivenessMonitor import StreamAlivenessMonitor
 from vangare.network.XMPPStreamHandler import XMPPStreamHandler
+from vangare.xml import Namespaces
 
 
 class XMLStreamProtocol(asyncio.Protocol):
@@ -17,9 +18,10 @@ class XMLStreamProtocol(asyncio.Protocol):
     Protocol to manage the network connection between nodes in the XMPP network. Handles the transport layer.
     '''
 
-    __slots__ = ["_state", "_transport", "_xml_parser", "_connection_timeout", "_timeout_monitor"]
+    __slots__ = ["_transport", "_xmlns", "_xml_parser", "_connection_timeout", "_timeout_monitor"]
 
-    def __init__(self, connection_timeout=None):
+    def __init__(self, namespace=Namespaces.CLIENT, connection_timeout=None):
+        self._xmlns = namespace
         self._transport = None
         self._xml_parser = None
         self._timeout_monitor = None
